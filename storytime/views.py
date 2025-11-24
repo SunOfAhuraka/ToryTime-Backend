@@ -1,0 +1,76 @@
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from django.db.models import Q
+from .models import Story, ChildProfile, Recording, QuizResult
+from .serializers import StorySerializer, ChildProfileSerializer, RecordingSerializer
+
+class StoryViewSet(viewsets.ModelViewSet):
+    serializer_class = StorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Logic: Show Global Stories OR Stories created by this user
+        # return Story.objects.filter(Q(created_by__isnull=True) | Q(created_by=user))
+        return Story.objects.all()
+
+    def perform_create(self, serializer):
+        # Automatically set the logged-in user as author for custom stories
+        serializer.save(created_by=self.request.user)
+
+class ChildViewSet(viewsets.ModelViewSet):
+    serializer_class = ChildProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Only show children belonging to the logged-in parent
+        return ChildProfile.objects.filter(parent=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(parent=self.request.user)
+
+class RecordingViewSet(viewsets.ModelViewSet):
+    serializer_class = RecordingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Recording.objects.filter(parent=self.request.user)
+    
+    @action(detail=False, methods=['get'])
+    def check_audio(self, request):
+        """
+        Custom endpoint for the Frontend 'Smart Audio Logic'.
+        Call: /api/recordings/check_audio/?story_id=1&child_id=5
+        """
+        story_id = request.query_params.get('story_id')
+        child_id = request.query_params.get('child_id')
+        
+        # Check if specific recording exists for this child
+        recording = Recording.objects.filter(
+            parent=request.user, 
+            story_id=story_id, 
+            for_child_id=child_id
+        ).first()
+        
+        if recording:
+            return Response({'audio_url': recording.audio_file.url})
+        
+        # Fallback: Check if there is a general recording for this story by this parent
+        recording = Recording.objects.filter(
+            parent=request.user, 
+            story_id=story_id, 
+            for_child__isnull=True
+        ).first()
+
+        if recording:
+            return Response({'audio_url': recording.audio_file.url})
+            
+        return Response({'audio_url': None}) # Frontend will play default
+
+
+
+
+
+
+
