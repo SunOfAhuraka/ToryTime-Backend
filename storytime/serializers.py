@@ -38,6 +38,7 @@ class RecordingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recording
         fields = '__all__'
+        read_only_fields = ['parent', 'created_at']
 
 class UserSerializer(serializers.ModelSerializer):
     children = ChildProfileSerializer(many=True, read_only=True)

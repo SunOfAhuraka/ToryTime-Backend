@@ -41,6 +41,9 @@ class RecordingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Recording.objects.filter(parent=self.request.user)
     
+    def perform_create(self, serializer):
+        serializer.save(parent=self.request.user)
+    
     @action(detail=False, methods=['get'])
     def check_audio(self, request):
         """
