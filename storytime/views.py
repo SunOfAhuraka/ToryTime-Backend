@@ -9,15 +9,39 @@ from .serializers import StorySerializer, ChildProfileSerializer, RecordingSeria
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
+from django.db.models import Q
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from .models import Story, ChildProfile
+from .serializers import StorySerializer
+
 class StoryViewSet(viewsets.ModelViewSet):
     serializer_class = StorySerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        # Logic: Show Global Stories OR Stories created by this user
-        # return Story.objects.filter(Q(created_by__isnull=True) | Q(created_by=user))
-        return Story.objects.all()
+        
+        # If user is a parent
+        if user.is_parent:
+            # Show: Global stories + their custom stories
+            return Story.objects.filter(
+                Q(created_by__isnull=True) | Q(created_by=user)
+            )
+        
+        # If user is a child
+        else:
+            
+            try:
+                child_profile = user.child_profile  
+                parent = child_profile.parent
+                
+                return Story.objects.filter(
+                    Q(created_by__isnull=True) | Q(created_by=parent)
+                )
+            except:
+                # Fallback: Only global stories if no parent found
+                return Story.objects.filter(created_by__isnull=True)
 
     def perform_create(self, serializer):
         # Automatically set the logged-in user as author for custom stories
