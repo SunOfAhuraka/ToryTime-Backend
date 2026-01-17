@@ -28,7 +28,7 @@ class Story(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return self.title
+        return f"{self.title} by {self.author}"
 
 class QuizQuestion(models.Model):
     story = models.ForeignKey(Story, related_name='quiz', on_delete=models.CASCADE)
