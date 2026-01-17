@@ -44,8 +44,10 @@ class StoryViewSet(viewsets.ModelViewSet):
                 return Story.objects.filter(created_by__isnull=True)
 
     def perform_create(self, serializer):
-        # Automatically set the logged-in user as author for custom stories
-        serializer.save(created_by=self.request.user)
+        if self.request.user.is_staff:
+            serializer.save()  
+        else:
+            serializer.save(created_by=self.request.user)
 
 class ChildViewSet(viewsets.ModelViewSet):
     serializer_class = ChildProfileSerializer
