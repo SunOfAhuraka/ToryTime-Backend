@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Q
 from .models import Story, ChildProfile, Recording, QuizResult
-from .serializers import StorySerializer, ChildProfileSerializer, RecordingSerializer, RegisterSerializer
+from .serializers import StorySerializer, ChildProfileSerializer, RecordingSerializer, RegisterSerializer, QuizResultSerializer
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -109,4 +109,24 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-
+class QuizResultViewSet(viewsets.ModelViewSet):
+    serializer_class = QuizResultSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        # If user is a parent, show quiz results for their children
+        if user.is_parent:
+            return QuizResult.objects.filter(
+                child__parent=user
+            ).order_by('-date_taken')
+        
+        # If user is a child, they can only see their own results
+        else:
+            # Find their child profile
+            try:
+                child_profile = ChildProfile.objects.get(user_id=user.id)
+                return QuizResult.objects.filter(child=child_profile)
+            except ChildProfile.DoesNotExist:
+                return QuizResult.objects.none()

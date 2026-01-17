@@ -64,3 +64,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             is_parent=True  # Automatically mark public registrations as Parents
         )
         return user
+    
+
+class QuizResultSerializer(serializers.ModelSerializer):
+    story_title = serializers.CharField(source='story.title', read_only=True)
+    child_name = serializers.CharField(source='child.name', read_only=True)
+    
+    class Meta:
+        model = QuizResult
+        fields = ['id', 'child', 'child_name', 'story', 'story_title', 'score', 'total_questions', 'date_taken']
